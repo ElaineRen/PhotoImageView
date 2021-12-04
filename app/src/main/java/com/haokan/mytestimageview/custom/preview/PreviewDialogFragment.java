@@ -288,6 +288,13 @@ public class PreviewDialogFragment extends DialogFragment {
         showInner(context, fragmentManager);
     }
 
+    /**
+     *
+     * @param context
+     * @param fragmentManager
+     * @param config
+     * @param findThumbnailView 获取指定位置的缩略图
+     */
     public void show(Context context, FragmentManager fragmentManager, Config config, IFindThumbnailView findThumbnailView) {
         mShareData.applyConfig(config);
         mShareData.thumbnailView = null;

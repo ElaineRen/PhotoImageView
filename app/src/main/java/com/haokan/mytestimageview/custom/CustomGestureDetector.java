@@ -16,6 +16,7 @@
 package com.haokan.mytestimageview.custom;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.VelocityTracker;
@@ -59,11 +60,15 @@ class CustomGestureDetector {
             public boolean onScale(ScaleGestureDetector detector) {
                 mZooming = true;
                 float scaleFactor = detector.getScaleFactor();
+                Log.d("onDrag","ScaleGestureDetector onScale  1111111111 detector.getFocusX(): " +
+                        ""+detector.getFocusX()+",detector.getFocusY():"+detector.getFocusY());
                 
                 if (Float.isNaN(scaleFactor) || Float.isInfinite(scaleFactor))
                     return false;
                 
                 if (scaleFactor >= 0) {
+                    Log.d("onDrag","ScaleGestureDetector onScale  1111111111-2222222222 detector.getFocusX(): " +
+                            ""+detector.getFocusX()+",detector.getFocusY():"+detector.getFocusY());
                     mListener.onScale(scaleFactor,
                         detector.getFocusX(), detector.getFocusY());
                 }
@@ -79,6 +84,9 @@ class CustomGestureDetector {
             @Override
             public void onScaleEnd(ScaleGestureDetector detector) {
                 // NO-OP
+                //+rmr
+                //mZooming = false;
+
             }
         };
         mDetector = new ScaleGestureDetector(context, mScaleListener);
@@ -128,7 +136,7 @@ class CustomGestureDetector {
                 if (null != mVelocityTracker) {
                     mVelocityTracker.addMovement(ev);
                 }
-                
+                Log.d("onDrag", "ACTION_DOWN 111111111111  mLastTouchX :"+mLastTouchX +",mLastTouchY："+mLastTouchY);
                 mLastTouchX = getActiveX(ev);
                 mLastTouchY = getActiveY(ev);
                 mIsDragging = false;
@@ -138,7 +146,6 @@ class CustomGestureDetector {
                 final float x = getActiveX(ev);
                 final float y = getActiveY(ev);
                 final float dx = x - mLastTouchX, dy = y - mLastTouchY;
-                
                 if (!mZooming && !mIsDragging && ev.getPointerCount() == 1) {
                     // TODO: 11/23/20 wanggaowan 如果已经开始缩放则不允许拖拽
                     // Use Pythagoras to see if drag length is larger than
@@ -147,6 +154,7 @@ class CustomGestureDetector {
                 }
                 
                 if (mIsDragging) {
+                    Log.d("onDrag", "onDrag 111111111111 dx:" + dx + ",dy:" + dy+" ");
                     mListener.onDrag(dx, dy);
                     mLastTouchX = x;
                     mLastTouchY = y;

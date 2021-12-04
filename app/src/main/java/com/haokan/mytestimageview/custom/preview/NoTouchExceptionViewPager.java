@@ -15,7 +15,7 @@ import androidx.viewpager.widget.ViewPager;
  *
  * @author Created by wanggaowan on 2019/2/28 0028 11:44
  */
-class NoTouchExceptionViewPager extends ViewPager {
+public class NoTouchExceptionViewPager extends ViewPager {
     
     private boolean mTouchEnable;
     

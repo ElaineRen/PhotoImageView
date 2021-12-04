@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 import android.view.ViewParent;
@@ -20,6 +21,8 @@ import com.haokan.mytestimageview.custom.PhotoBaseView;
 import com.haokan.mytestimageview.custom.PhotoViewAttacher;
 import com.haokan.mytestimageview.custom.listener.OnScaleChangedListener;
 import com.haokan.mytestimageview.custom.listener.OnViewDragListener;
+
+import java.lang.annotation.ElementType;
 
 public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, OnViewDragListener {
     private static final int RESET_ANIM_TIME = 100;
@@ -128,6 +131,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
     public void onScaleChange(float scaleFactor, float focusX, float focusY) {
         mScaleVerticalScrollEdge = attacher.getVerticalScrollEdge();
         mScaleHorizontalScrollEdge = attacher.getHorizontalScrollEdge();
+        Log.d("onDrag","onScaleChange 444444444444:");
         if (mOnScaleChangedListener != null) {
             mOnScaleChangedListener.onScaleChange(scaleFactor, focusX, focusY);
         }
@@ -139,15 +143,37 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
                 || Math.sqrt((dx * dx) + (dy * dy)) < mViewConfiguration.getScaledTouchSlop()
                 || !hasVisibleDrawable();
 
+        Log.d("onDrag", "onDrag 4444444444444 intercept:" + intercept);
         if (!mDragging && intercept) {
             return false;
         }
 
-        if (getScale() > 1) {
+        //判断一下 下拉的距离大于上边界
+        boolean dyBigDx = Math.abs(dy) > Math.abs(dx);
+        int verticalScrollEdge = attacher.getVerticalScrollEdge();//0 靠近边缘，-1 图片边缘超出image 高度，-2，图片边缘在image高度内
+        int horizontalScrollEdge = attacher.getHorizontalScrollEdge();
+        boolean isTop = verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE;//除 图片边缘超出image 高度 以外的情况，
+        boolean isBottom = verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTTOM
+                || verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTH;
+
+        boolean isVerticalScroll = dyBigDx && ((isTop && dy > 0) || (isBottom && dy < 0));
+        boolean isVerticalScrollTop = dyBigDx && (isTop && dy > 0);
+        boolean isVerticalScrollBottom = dyBigDx && (isBottom && dy < 0);
+
+        Log.d("onDrag", "onDrag 4444444444444-222222222222 isVerticalScroll:" + isVerticalScroll
+                + ",isVerticalScrollTop:" + isVerticalScrollTop + ",isVerticalScrollBottom:" + isVerticalScrollBottom);
+        Log.d("onDrag", "onDrag 4444444444444-222222222222 verticalScrollEdge:" + verticalScrollEdge + ",horizontalScrollEdge:" + horizontalScrollEdge);
+
+        if (getScale() > 1) {// 如果图片的scale 大于1，图片处于放大状态，可以拖拽
+            // 需要处理 图片的scale 大于1，且是下拉 下拉的距离超过图片上边界的情况
+            //if (dyBigDx && verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE) {
+            //
+            //} else {
             return dragWhenScaleThanOne(dx, dy);
+            //}
         }
 
-        if (!mDragging && Math.abs(dx) > Math.abs(dy)) {
+        if (!mDragging && Math.abs(dx) > Math.abs(dy)) {//横向的大于 竖向的拖拽，不消费此次
             return false;
         }
 
@@ -183,6 +209,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
         } else if (mIntAlpha > 255) {
             mIntAlpha = 255;
         }
+        Log.d("onDrag", "onDrag  4444444444444-3333333333333 intercept:" + intercept);
 
         mHelper.mRootViewBgMask.getBackground().setAlpha(mIntAlpha);
         mHelper.showThumbnailViewMask(mIntAlpha >= 255);
@@ -190,12 +217,15 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
         if (scrollY < 0 && scale >= 0.6) {
             // 更改大小
             setScale(scale);
+            Log.d("onDrag", "onDrag  4444444444444-4444444444 intercept:" + intercept);
         }
         return true;
     }
 
     /**
      * 处理图片如果超出控件大小时的滑动
+     * 左右滑动 的边界
+     * 下滑的边界
      */
     private boolean dragWhenScaleThanOne(float dx, float dy) {
         boolean dxBigDy = Math.abs(dx) > Math.abs(dy);
@@ -219,7 +249,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
             } else {
                 dx = 0;
             }
-
+            Log.d("onDrag", "dragWhenScaleThanOne 55555555555 mDragging:" + mDragging);
             // 移动图像
             scrollBy(((int) -dx), ((int) -dy));
             return true;
@@ -243,6 +273,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
                 if (parent != null) {
                     parent.requestDisallowInterceptTouchEvent(true);
                 }
+                Log.d("onDrag", "dragWhenScaleThanOne 6666666666 mDragging:" + mDragging);
 
                 mDragging = true;
                 // 移动图像
@@ -312,6 +343,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
     public void setImageChangeListener(ImageChangeListener listener) {
         mImageChangeListener = listener;
     }
+
     public void setStartView(boolean isStartView) {
         mStartView = isStartView;
     }

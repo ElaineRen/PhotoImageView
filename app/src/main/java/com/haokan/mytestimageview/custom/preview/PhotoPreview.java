@@ -358,7 +358,12 @@ public class PhotoPreview {
     public void show(final IFindThumbnailView findThumbnailView) {
         show(null, findThumbnailView);
     }
-    
+
+    /**
+     *
+     * @param thumbnailView
+     * @param findThumbnailView 指定的缩略图的控件，即big flow中的imageView控件
+     */
     private void show(final View thumbnailView, final IFindThumbnailView findThumbnailView) {
         correctConfig();
         final PreviewDialogFragment fragment
