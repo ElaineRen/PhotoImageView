@@ -140,6 +140,8 @@ public class PhotoPreviewHelper {
     private List<OnOpenListener> mOpenListenerList;
     private List<OnExitListener> mExitListenerList;
 
+    private String TAG = "PhotoPreviewHelper";
+
     public PhotoPreviewHelper(PreviewDialogFragment fragment, int position) {
         mFragment = fragment;
         mShareData = mFragment.mShareData;
@@ -663,6 +665,7 @@ public class PhotoPreviewHelper {
         // 记录预览打开时，缩略图对象
         View openThumbnailView = mThumbnailView;
         if (mPosition != mOldPosition) {
+            Log.d(TAG, "exit mPosition != mOldPosition:");
             mThumbnailView = getThumbnailView(mShareData);
             if (mThumbnailView != null) {
                 mThumbnailViewVisibility = mThumbnailView.getVisibility();
@@ -672,19 +675,24 @@ public class PhotoPreviewHelper {
             mOldPosition = mPosition;
         }
 
+        //重置 辅助view 的大小 处理scale >1 的情况
+        //if (photoView.getScale() > 1) {
+        //    photoView.setScale(0.8f);
+        //
+        //}
         resetHelpViewSize(viewHolder);
-        Log.d("previewDialog", "currentPosition:" + mFragment.mViewPager.getCurrentItem());
         if (mShareData != null && mShareData.config != null && mShareData.config.mOnPagerItemPositionListener != null) {
             mShareData.config.mOnPagerItemPositionListener.onItemPositionWithInnerPosition(mShareData.config.mFlowPosition, mFragment.mViewPager.getCurrentItem());
         }
 
-        // 退出dialog的时候，将当前的postion 值
-
         if (mThumbnailView == null) {
             callOnOpen(ANIM_START_PRE);
+            float scaleX = mHelperView.getScaleX();
+            float scaleY = mHelperView.getScaleY();
             ObjectAnimator scaleOx = ObjectAnimator.ofFloat(mHelperView, "scaleX", 1f, 0f);
             ObjectAnimator scaleOy = ObjectAnimator.ofFloat(mHelperView, "scaleY", 1f, 0f);
             AnimatorSet set = new AnimatorSet();
+            Log.d("onDrag", "onDrag mHelperView scale  scaleX:" + scaleX + ",scaleY:" + scaleY);
             set.setDuration(mAnimDuration);
             set.setInterpolator(INTERPOLATOR);
             set.playTogether(scaleOx, scaleOy, getViewBgAnim(Color.TRANSPARENT, mAnimDuration, null));
@@ -717,8 +725,11 @@ public class PhotoPreviewHelper {
         PhotoView photoView = viewHolder.getPhotoView();
         float[] noScaleImageActualSize = viewHolder.getNoScaleImageActualSize();
         FrameLayout rootView = mFragment.mRootView;
+        Log.d(TAG, "resetHelpViewSize 重置辅助View的大小:");
 
         if (mThumbnailViewScaleType == ScaleType.MATRIX || photoView.getScale() != 1) {
+            Log.d(TAG, "resetHelpViewSize 重置辅助View的大小 111111111111111:");
+
             // thumbnailView是ScaleType.MATRIX需要设置ImageView与drawable大小一致,且如果是下拉后缩小后关闭预览，则肯能无法与缩略图无缝衔接
             // 得到关闭时预览图片真实绘制大小
             float[] imageActualSize = mFloatTemp;
@@ -729,6 +740,7 @@ public class PhotoPreviewHelper {
             }
 
             if (photoView.getScale() < 1 || (mThumbnailViewScaleType == ScaleType.MATRIX && photoView.getScale() == 1)) {
+                Log.d(TAG, "resetHelpViewSize 重置辅助View的大小 222222222222222:");
                 // 计算关闭时预览图片真实X,Y坐标
                 // mPhotoView向下移动后缩放比例误差值，该值是手动调出来的，不清楚为什么超出了这么多
                 // 只有mPhotoView.getScale() < 1时才会出现此误差
@@ -741,21 +753,24 @@ public class PhotoPreviewHelper {
                 float x = rootView.getWidth() / 2f - noScaleImageActualSize[0] / 2 // 预览图片未移动未缩放时实际绘制drawable左上角Z轴值
                         - photoView.getScrollX() // 向左或向右移动的距离
                         + imageActualSize[0] * (1 - photoView.getScale() - errorRatio); // 由于在向下移动时，伴随图片缩小，因此需要加上缩小宽度
-
                 mHelperViewParent.setTranslationX(x);
                 mHelperViewParent.setTranslationY(y);
+
             } else if (photoView.getScale() > 1) {
+                Log.d(TAG, "resetHelpViewSize 重置辅助View的大小 33333333333333333:");
                 Matrix imageMatrix = photoView.getImageMatrix();
                 float scrollX = MatrixUtils.getValue(imageMatrix, Matrix.MTRANS_X);
                 float scrollY = MatrixUtils.getValue(imageMatrix, Matrix.MTRANS_Y);
                 float y = imageActualSize[1] > rootView.getHeight() ? scrollY : rootView.getHeight() / 2f - imageActualSize[1] / 2f;
                 float x = imageActualSize[0] > rootView.getWidth() ? scrollX : rootView.getWidth() / 2f - imageActualSize[0] / 2f;
-
+                //photoView.setScale(0.95f);
+                //resetHelpViewSize(viewHolder);
                 mHelperViewParent.setTranslationX(x);
                 mHelperViewParent.setTranslationY(y);
             }
             setViewSize(mHelperViewParent, ((int) imageActualSize[0]), ((int) imageActualSize[1]));
             setViewSize(mHelperView, ((int) imageActualSize[0]), ((int) imageActualSize[1]));
+
         }
     }
 

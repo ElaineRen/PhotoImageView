@@ -26,6 +26,7 @@ import java.lang.annotation.ElementType;
 
 public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, OnViewDragListener {
     private static final int RESET_ANIM_TIME = 100;
+    private String TAG = "PhotoView ";
 
     private final Scroller mScroller;
 
@@ -48,6 +49,9 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
     // 记录缩放后水平方向边界判定值
     private int mScaleHorizontalScrollEdge = PhotoViewAttacher.HORIZONTAL_EDGE_INSIDE;
     private OnScaleChangedListener mOnScaleChangedListener;
+    //拖拽最后的dx和dy 记录， 用于scale>1 拖拽抬起手指时  判断是否是下滑的边界
+    private float mDragLastDx;
+    private float mDragLastDy;
 
     public PhotoView(@NonNull Context context) {
         this(context, null);
@@ -79,6 +83,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
         switch (event.getAction()) {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
+                Log.d("onDrag", "dispatchTouchEvent: onFingerUp event.getX()：" + event.getX() + ",event.getX():" + event.getY());
                 onFingerUp();
                 break;
         }
@@ -86,26 +91,62 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
         return super.dispatchTouchEvent(event);
     }
 
+    /**
+     * 手指抬起的操作
+     */
     private void onFingerUp() {
-        mDragging = false;
-        if (getScale() > 1) {
+        //scale 大于1 且 isVerticalScrollOutTop 为true 先执行
+        if (getScale() > 1 && mDragging && isVerticalScrollOutTop(mDragLastDx, mDragLastDy)) {
+            mDragging = false;
+            if (mIntAlpha < 240) {
+                Log.d("onDrag", "dispatchTouchEvent: onFingerUp mHelper.exit()111111;");
+                mDragLastDx = 0;
+                mDragLastDy = 0;
+                // 执行 exit之前 先translation 偏移到 原位置的左下方 再执行退出动画
+                mHelper.exit();
+            } else {
+                if (Math.abs(getScrollX()) > 0 || Math.abs(getScrollY()) > 0) {
+                    Log.d("onDrag", "dispatchTouchEvent: onFingerUp Math.abs(getScrollX()：" + Math.abs(getScrollX()) + ",Math.abs(getScrollY():" + Math.abs(getScrollY()));
+                    reset();
+                }
+            }
+        } else if (getScale() > 1 && isVerticalScrollOutBottom(mDragLastDx, mDragLastDy)) {
+            mDragging = false;
+            mDragLastDx = 0;
+            mDragLastDy = 0;
             if (Math.abs(getScrollX()) > 0 || Math.abs(getScrollY()) > 0) {
+                Log.d("onDrag", "dispatchTouchEvent: onFingerUp Math.abs(getScrollX()：" + Math.abs(getScrollX()) + ",Math.abs(getScrollY():" + Math.abs(getScrollY()));
                 reset();
             }
             return;
+        } else {
+            mDragging = false;
+            if (getScale() > 1) {
+                if (Math.abs(getScrollX()) > 0 || Math.abs(getScrollY()) > 0) {
+                    Log.d("onDrag", "dispatchTouchEvent: onFingerUp Math.abs(getScrollX()：" + Math.abs(getScrollX()) + ",Math.abs(getScrollY():" + Math.abs(getScrollY()));
+                    reset();
+                }
+                return;
+            }
+            // 这里恢复位置和透明度
+            if (mIntAlpha != 255 && getScale() < 0.8) {
+                // 执行退出动画
+                Log.d("onDrag", "dispatchTouchEvent: onFingerUp mHelper.exit() 22222222;");
+                mHelper.exit();
+            } else {
+                reset();
+            }
         }
 
-        // 这里恢复位置和透明度
-        if (mIntAlpha != 255 && getScale() < 0.8) {
-            mHelper.exit();
-        } else {
-            reset();
-        }
     }
 
+    /**
+     * 预览图重置
+     */
     private void reset() {
         mIntAlpha = 255;
         mBgAnimStart = true;
+        Log.d("onDrag", " onFingerUp reset：");
         mHelper.doViewBgAnim(Color.BLACK, RESET_ANIM_TIME, new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
@@ -131,46 +172,33 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
     public void onScaleChange(float scaleFactor, float focusX, float focusY) {
         mScaleVerticalScrollEdge = attacher.getVerticalScrollEdge();
         mScaleHorizontalScrollEdge = attacher.getHorizontalScrollEdge();
-        Log.d("onDrag","onScaleChange 444444444444:");
+        Log.d("onDrag", TAG + "ScaleGestureDetector onScaleChange 444444444444:");
         if (mOnScaleChangedListener != null) {
             mOnScaleChangedListener.onScaleChange(scaleFactor, focusX, focusY);
         }
     }
 
+    //
     @Override
     public boolean onDrag(float dx, float dy) {
         boolean intercept = mBgAnimStart
                 || Math.sqrt((dx * dx) + (dy * dy)) < mViewConfiguration.getScaledTouchSlop()
                 || !hasVisibleDrawable();
 
-        Log.d("onDrag", "onDrag 4444444444444 intercept:" + intercept);
+        Log.d("onDrag", TAG + "onDrag 4444444444444 intercept:" + intercept + ",dx:" + dx + ",dy:" + dy);
         if (!mDragging && intercept) {
             return false;
         }
 
-        //判断一下 下拉的距离大于上边界
-        boolean dyBigDx = Math.abs(dy) > Math.abs(dx);
-        int verticalScrollEdge = attacher.getVerticalScrollEdge();//0 靠近边缘，-1 图片边缘超出image 高度，-2，图片边缘在image高度内
-        int horizontalScrollEdge = attacher.getHorizontalScrollEdge();
-        boolean isTop = verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE;//除 图片边缘超出image 高度 以外的情况，
-        boolean isBottom = verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTTOM
-                || verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTH;
 
-        boolean isVerticalScroll = dyBigDx && ((isTop && dy > 0) || (isBottom && dy < 0));
-        boolean isVerticalScrollTop = dyBigDx && (isTop && dy > 0);
-        boolean isVerticalScrollBottom = dyBigDx && (isBottom && dy < 0);
-
-        Log.d("onDrag", "onDrag 4444444444444-222222222222 isVerticalScroll:" + isVerticalScroll
-                + ",isVerticalScrollTop:" + isVerticalScrollTop + ",isVerticalScrollBottom:" + isVerticalScrollBottom);
-        Log.d("onDrag", "onDrag 4444444444444-222222222222 verticalScrollEdge:" + verticalScrollEdge + ",horizontalScrollEdge:" + horizontalScrollEdge);
-
+        //scale >1;
         if (getScale() > 1) {// 如果图片的scale 大于1，图片处于放大状态，可以拖拽
-            // 需要处理 图片的scale 大于1，且是下拉 下拉的距离超过图片上边界的情况
-            //if (dyBigDx && verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE) {
-            //
-            //} else {
-            return dragWhenScaleThanOne(dx, dy);
-            //}
+            // 需要处理 图片的scale 大于1，垂直方向的滑动 图片高度未超过 screenView 的高度，可以下拉消失
+            if (isVerticalScrollOutTop(dx, dy) || isVerticalScrollOutBottom(dx, dy)) {
+                Log.d("onDrag", TAG + "onDrag 4444444444444  isVerticalScrollOutTop:");
+            } else {
+                return dragWhenScaleThanOne(dx, dy);
+            }
         }
 
         if (!mDragging && Math.abs(dx) > Math.abs(dy)) {//横向的大于 竖向的拖拽，不消费此次
@@ -186,40 +214,128 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
         }
 
         mDragging = true;
+        mDragLastDx = dx;
+        mDragLastDy = dy;
         float scale = getScale();
         // 移动图像
-        scrollBy(((int) -dx), ((int) -dy));
-        float scrollY = getScrollY();
-        if (scrollY >= 0) {
-            scale = 1f;
-            mIntAlpha = 255;
+        if (scale > 1 && isVerticalScrollOutTop(dx, dy)) {
+            scrollBy(0, ((int) -dy));
+            // 新增的逻辑，scale 大于1，且是下拉的操作
+            float scrollY = getScrollY();
+            if (scrollY >= 0) {
+                mIntAlpha = 255;
+            } else {
+                //scale -= dy * 0.003f;
+                mIntAlpha -= dy * 0.03;
+            }
+            if (scale < 0) {
+                scale = 0f;
+            }
+            if (mIntAlpha < 200) {
+                mIntAlpha = 200;
+            } else if (mIntAlpha > 255) {
+                mIntAlpha = 255;
+            }
+
+            Log.d("onDrag", TAG + "onDrag  4444444444444-5555555555555555 getScrollY:" + scrollY);
+            mHelper.mRootViewBgMask.getBackground().setAlpha(mIntAlpha);
+            mHelper.showThumbnailViewMask(mIntAlpha >= 255);
+            if (scrollY < 0 && scale > 1) {
+                // 更改大小
+                setScale(scale);
+                Log.d("onDrag", TAG + "onDrag  4444444444444-66666666666666 scale:" + scale);
+            }
+        } else if (scale > 1 && isVerticalScrollOutBottom(dx, dy)) {
+            scrollBy(0, ((int) -dy));
+
         } else {
-            scale -= dy * 0.001f;
-            mIntAlpha -= dy * 0.03;
+            //原来的逻辑
+            scrollBy(((int) -dx), ((int) -dy));
+            float scrollY = getScrollY();
+            if (scrollY >= 0) {
+                scale = 1f;
+                mIntAlpha = 255;
+            } else {
+                scale -= dy * 0.001f;
+                mIntAlpha -= dy * 0.03;
+            }
+
+            if (scale > 1) {
+                scale = 1f;
+            } else if (scale < 0) {
+                scale = 0f;
+            }
+
+            if (mIntAlpha < 200) {
+                mIntAlpha = 200;
+            } else if (mIntAlpha > 255) {
+                mIntAlpha = 255;
+            }
+            Log.d("onDrag", TAG + "onDrag  4444444444444-3333333333333 getScrollY:" + scrollY);
+            mHelper.mRootViewBgMask.getBackground().setAlpha(mIntAlpha);
+            mHelper.showThumbnailViewMask(mIntAlpha >= 255);
+
+            if (scrollY < 0 && scale >= 0.6) {
+                // 更改大小
+                setScale(scale);
+                Log.d("onDrag", TAG + "onDrag  4444444444444-4444444444 scale:" + scale);
+            }
         }
 
-        if (scale > 1) {
-            scale = 1f;
-        } else if (scale < 0) {
-            scale = 0f;
-        }
-
-        if (mIntAlpha < 200) {
-            mIntAlpha = 200;
-        } else if (mIntAlpha > 255) {
-            mIntAlpha = 255;
-        }
-        Log.d("onDrag", "onDrag  4444444444444-3333333333333 intercept:" + intercept);
-
-        mHelper.mRootViewBgMask.getBackground().setAlpha(mIntAlpha);
-        mHelper.showThumbnailViewMask(mIntAlpha >= 255);
-
-        if (scrollY < 0 && scale >= 0.6) {
-            // 更改大小
-            setScale(scale);
-            Log.d("onDrag", "onDrag  4444444444444-4444444444 intercept:" + intercept);
-        }
         return true;
+    }
+
+    /**
+     * 垂直方向  滑动打的判断
+     *
+     * @param dx
+     * @param dy
+     * @return true 表示触发下拉 消失的逻辑
+     */
+    private boolean isVerticalScrollOutTop(float dx, float dy) {
+        //判断一下 下拉的距离大于上边界
+        boolean dyBigDx = Math.abs(dy) > Math.abs(dx);
+        int verticalScrollEdge = attacher.getVerticalScrollEdge();//0 靠近边缘，-1 图片边缘超出image 高度，-2，图片边缘在image高度内
+        int horizontalScrollEdge = attacher.getHorizontalScrollEdge();
+        boolean isTop = (verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE) || (getScale() > 1 && verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE);//除 图片边缘超出image 高度 以外的情况，
+        boolean isBottom = verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTTOM
+                || verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTH;
+
+        boolean isVerticalScroll = dyBigDx && ((isTop && dy > 0) || (isBottom && dy < 0));
+        boolean isVerticalScrollTop = dyBigDx && (isTop && dy > 0);
+        boolean isVerticalScrollBottom = dyBigDx && (isBottom && dy < 0);
+
+        Log.d("onDrag", TAG + "onDrag isVerticalScrollOutTop 4444444444444-222222222222 isVerticalScroll:" + isVerticalScroll
+                + ",isVerticalScrollTop:" + isVerticalScrollTop + ",isVerticalScrollBottom:" + isVerticalScrollBottom);
+        Log.d("onDrag", TAG + "onDrag isVerticalScrollOutTop 4444444444444-222222222222 verticalScrollEdge:" + verticalScrollEdge + ",horizontalScrollEdge:" + horizontalScrollEdge);
+
+        return dyBigDx && dy > 0 && isVerticalScrollTop;
+    }
+
+    /**
+     * @param dx
+     * @param dy
+     * @return true 表示触发 拉 底部的边界
+     */
+    private boolean isVerticalScrollOutBottom(float dx, float dy) {
+
+        //判断一下 下拉的距离大于上边界
+        boolean dyBigDx = Math.abs(dy) > Math.abs(dx);
+        int verticalScrollEdge = attacher.getVerticalScrollEdge();//0 靠近边缘，-1 图片边缘超出image 高度，-2，图片边缘在image高度内
+        int horizontalScrollEdge = attacher.getHorizontalScrollEdge();
+        boolean isTop = verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE;//除 图片边缘超出image 高度 以外的情况，
+        boolean isBottom = verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTTOM
+                || verticalScrollEdge == PhotoViewAttacher.VERTICAL_EDGE_BOTH;
+
+        boolean isVerticalScroll = dyBigDx && ((isTop && dy > 0) || (isBottom && dy < 0));
+        boolean isVerticalScrollTop = dyBigDx && (isTop && dy > 0);
+        boolean isVerticalScrollBottom = dyBigDx && (isBottom && dy < 0);
+
+        Log.d("onDrag", TAG + "onDrag 4444444444444-3333333333 isVerticalScroll:" + isVerticalScroll
+                + ",isVerticalScrollTop:" + isVerticalScrollTop + ",isVerticalScrollBottom:" + isVerticalScrollBottom);
+        Log.d("onDrag", TAG + "onDrag 4444444444444-33333333333 verticalScrollEdge:" + verticalScrollEdge + ",horizontalScrollEdge:" + horizontalScrollEdge);
+
+        return dyBigDx && dy < 0 && verticalScrollEdge != PhotoViewAttacher.VERTICAL_EDGE_OUTSIDE;
     }
 
     /**
@@ -249,7 +365,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
             } else {
                 dx = 0;
             }
-            Log.d("onDrag", "dragWhenScaleThanOne 55555555555 mDragging:" + mDragging);
+            Log.d("onDrag", TAG + "dragWhenScaleThanOne 55555555555 mDragging:" + mDragging);
             // 移动图像
             scrollBy(((int) -dx), ((int) -dy));
             return true;
@@ -273,7 +389,7 @@ public class PhotoView extends PhotoBaseView implements OnScaleChangedListener, 
                 if (parent != null) {
                     parent.requestDisallowInterceptTouchEvent(true);
                 }
-                Log.d("onDrag", "dragWhenScaleThanOne 6666666666 mDragging:" + mDragging);
+                Log.d("onDrag", TAG + "dragWhenScaleThanOne 6666666666 mDragging:" + mDragging);
 
                 mDragging = true;
                 // 移动图像

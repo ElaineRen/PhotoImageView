@@ -55,6 +55,7 @@ import com.haokan.mytestimageview.utils.Util;
 public class PhotoViewAttacher implements View.OnTouchListener,
         View.OnLayoutChangeListener {
 
+    private String TAG = "PhotoViewAttacher ";
     public static float DEFAULT_MAX_SCALE = 3.0f;
     public static float DEFAULT_MID_SCALE = 1.75f;
     public static float DEFAULT_MIN_SCALE = 1.0f;
@@ -123,12 +124,16 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     private boolean mZoomEnabled = true;
     private ScaleType mScaleType = ScaleType.FIT_CENTER;
 
+    /**
+     * MotionEvent 的事件的手势监听
+     *
+     */
     private final OnGestureListener onGestureListener = new OnGestureListener() {
 
         @Override
         public void onDrag(float dx, float dy) {
-            Log.d("onDrag", "onDrag 2222222222222-1111111111 dx:" + dx + ",dy:" + dy);
-            mSuppMatrix.postTranslate(dx, dy);
+            Log.d("onDrag", TAG + "onDrag 2222222222222-1111111111 dx:" + dx + ",dy:" + dy);
+            mSuppMatrix.postTranslate(dx, dy);//平移操作
             checkAndDisplayMatrix();
             if (mOnViewDragListener != null) {
                 boolean consume = mOnViewDragListener.onDrag(dx, dy);
@@ -146,35 +151,37 @@ public class PhotoViewAttacher implements View.OnTouchListener,
              * on, and the direction of the scroll (i.e. if we're pulling against
              * the edge, aka 'overscrolling', let the parent take over).
              */
-            Log.d("onDrag", "onDrag 2222222222222-2222222222 dx:" + dx + ",dy:" + dy);
+            Log.d("onDrag", TAG + "onDrag 2222222222222-2222222222 dx:" + dx + ",dy:" + dy);
 
             ViewParent parent = mImageView.getParent();
             if (mAllowParentInterceptOnEdge && !mScaleDragDetector.isScaling() && !mBlockParentIntercept) {
-                // TODO: 11/29/20 wanggaowan 逻辑判断调整，增加 mHorizontalScrollEdge == HORIZONTAL_EDGE_INSIDE时也让父类拦截
+                //  逻辑判断调整，增加 mHorizontalScrollEdge == HORIZONTAL_EDGE_INSIDE时也让父类拦截
                 if (mHorizontalScrollEdge == HORIZONTAL_EDGE_BOTH
                         || mHorizontalScrollEdge == HORIZONTAL_EDGE_INSIDE // 说明图片实际宽度小于View的宽度
                         || (mHorizontalScrollEdge == HORIZONTAL_EDGE_LEFT && dx >= 1f)
                         || (mHorizontalScrollEdge == HORIZONTAL_EDGE_RIGHT && dx <= -1f)
-                    // 本项目只结合ViewPager,只有左右滑动冲突，因此不做垂直处理
-                    // || mVerticalScrollEdge == VERTICAL_EDGE_BOTH
-                    // || (mVerticalScrollEdge == VERTICAL_EDGE_TOP && dy >= 1f)
-                    // || (mVerticalScrollEdge == VERTICAL_EDGE_BOTTOM && dy <= -1f)
+                        // 本项目只结合ViewPager,只有左右滑动冲突，因此不做垂直处理
+                        //|| mVerticalScrollEdge == VERTICAL_EDGE_BOTH
+                        //|| (mVerticalScrollEdge == VERTICAL_EDGE_INSIDE)
+                        //|| (mVerticalScrollEdge == VERTICAL_EDGE_TOP && dy >= 1f)
+                        //|| (mVerticalScrollEdge == VERTICAL_EDGE_BOTTOM && dy <= -1f)
                 ) {
                     if (parent != null) {
-                        Log.d("onDrag", "onDrag 2222222222222-33333333333 dx:" + dx + ",dy:" + dy);
-                        parent.requestDisallowInterceptTouchEvent(false);
+                        Log.d("onDrag", TAG + "onDrag 2222222222222-33333333333 dx:" + dx + ",dy:" + dy);
+                        parent.requestDisallowInterceptTouchEvent(false);// 请求父类拦截
                     }
                 }
             } else {
                 if (parent != null) {
-                    Log.d("onDrag", "onDrag 2222222222222-44444444444 dx:" + dx + ",dy:" + dy);
-                    parent.requestDisallowInterceptTouchEvent(true);//拦截掉父view 的触摸事件
+                    Log.d("onDrag", TAG + "onDrag 2222222222222-44444444444 dx:" + dx + ",dy:" + dy);
+                    parent.requestDisallowInterceptTouchEvent(true);//请求父类不要拦截请求
                 }
             }
         }
 
         @Override
         public void onFling(float startX, float startY, float velocityX, float velocityY) {
+            Log.d("onDrag", TAG + "onFling 2222222222222  dx:");//手指抬起之后 判断当前是否是一次滑动
             mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
             mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
                     getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
@@ -184,10 +191,11 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         @Override
         public void onScale(float scaleFactor, float focusX, float focusY) {
             if (getScale() < mMaxScale || scaleFactor < 1f) {
-                Log.d("onDrag","ScaleGestureDetector onScale 2222222222222");
+                Log.d("onDrag", TAG + "ScaleGestureDetector onScale 2222222222222");
                 if (mScaleChangeListener != null) {
                     mScaleChangeListener.onScaleChange(scaleFactor, focusX, focusY);
                 }
+                // 第一个参数 x轴 缩放大小，y轴缩放大小，三四参数是缩放的中心点
                 mSuppMatrix.postScale(scaleFactor, scaleFactor, focusX, focusY);
                 checkAndDisplayMatrix();
             }
@@ -219,6 +227,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             public boolean onFling(MotionEvent e1, MotionEvent e2,
                                    float velocityX, float velocityY) {
                 if (mSingleFlingListener != null) {
+                    Log.d("onDrag", TAG + "onDrag 2222222222222-onFling dx:" );
                     if (getScale() > DEFAULT_MIN_SCALE) {
                         return false;
                     }
@@ -695,6 +704,10 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         resetMatrix();
     }
 
+    /**
+     * 检测 一次matrix的操作之后 图片的边界判定
+     * @return
+     */
     private boolean checkMatrixBounds() {
         final RectF rect = getDisplayRect(getDrawMatrix());
         if (rect == null) {
@@ -788,6 +801,9 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         return mHorizontalScrollEdge;
     }
 
+    /**
+     * 图片放大动画
+     */
     private class AnimatedZoomRunnable implements Runnable {
 
         private final float mFocalX, mFocalY;
@@ -859,7 +875,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             }
             mCurrentX = startX;
             mCurrentY = startY;
-            // If we actually can move, fling the scroller
+            // If we actually can move, fling the scroller 甩动滚动
             if (startX != maxX || startY != maxY) {
                 mScroller.fling(startX, startY, velocityX, velocityY, minX,
                         maxX, minY, maxY, 0, 0);
