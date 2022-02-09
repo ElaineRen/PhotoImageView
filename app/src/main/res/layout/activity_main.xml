@@ -33,5 +33,29 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/onClick" />
+    <Button
+        android:id="@+id/ThreeClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click to WebView"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/twoClick" />
+    <Button
+        android:id="@+id/clickToShowTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click to show Title"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/ThreeClick" />
+    <Button
+        android:id="@+id/hotFixBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click to hot fix"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/clickToShowTitle" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

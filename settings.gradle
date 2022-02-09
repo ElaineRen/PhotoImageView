@@ -1,3 +1,4 @@
 rootProject.name = "MyTestImageView"
 include ':app'
 include ':mylibrary'
+include ':plugin'
