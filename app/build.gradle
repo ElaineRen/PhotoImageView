@@ -5,12 +5,18 @@ plugins {
 //apply plugin: 'com.google.firebase.crashlytics'
     id 'kotlin-android'
     id 'kotlin-android-extensions'
+    id 'kotlin-kapt'//Kotlin 使用 Databinding必须添加
+    id 'org.jetbrains.kotlin.android'
 }
 apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 31
     buildToolsVersion "31.0.0"
+
+    dataBinding {
+        enabled = true
+    }
 
     defaultConfig {
         applicationId "com.haokan.mytestimageview"
@@ -62,6 +68,7 @@ dependencies {
     implementation "androidx.core:core-ktx:+"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
+    //implementation 'implementation "androidx.work:work-runtime:2.7.1'
 
 
 }

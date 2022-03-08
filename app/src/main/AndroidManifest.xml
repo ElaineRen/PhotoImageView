@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.haokan.mytestimageview">
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!--<uses-permission android:name="android.permission.WRITE_SETTINGS"-->
+    <!--    tools:ignore="ProtectedPermissions" />-->
+    <!--<uses-feature android:name="android.software.live_wallpaper"/>-->
 
     <application
         android:name=".MyApplication"
@@ -12,12 +18,14 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyTestImageView">
-        <activity android:name=".MainActivity6"></activity>
+
+        <activity android:name=".MainActivity6"
+            android:exported="false"/>
         <activity
             android:name=".MainActivity2"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".WallpaperSetActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,7 +33,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MainActivity3" />
+        <activity android:name=".MainActivity3"
+            android:exported="false"/>
+
+        <service android:name="com.haokan.wallpaper.DefiniteTimeWallpaperService"
+            android:exported="true"
+            android:enabled="true"
+            android:label="@string/wallpaper_name"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter >
+                <action android:name="android.service.wallpaper.WallpaperService"/>
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper"
+                android:resource="@xml/my_wallpaper"/>
+        </service>
     </application>
 
 </manifest>

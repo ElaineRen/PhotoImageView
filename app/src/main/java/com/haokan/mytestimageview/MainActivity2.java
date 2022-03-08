@@ -5,9 +5,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
 
+import android.app.WallpaperManager;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.haokan.mytestimageview.adapter.MyPagerAdapter;
@@ -17,7 +23,9 @@ import com.haokan.mytestimageview.custom.listener.OnPagerItemPositionListener;
 import com.haokan.mytestimageview.custom.preview.IndicatorType;
 import com.haokan.mytestimageview.custom.preview.PhotoPreview;
 import com.haokan.mytestimageview.custom.preview.ShapeTransformType;
+import com.haokan.wallpaper.DefiniteTimeWallpaperService;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 public class MainActivity2 extends AppCompatActivity {
@@ -136,5 +144,18 @@ public class MainActivity2 extends AppCompatActivity {
         //                return viewByPosition.findViewById(R.id.itemIv);
         //            });
         //});
+        startLiveWallpaperPreView(getPackageName(), DefiniteTimeWallpaperService.class.getName());
+    }
+
+    public void startLiveWallpaperPreView(String packageName, String classFullName) {
+        ComponentName componentName = new ComponentName(packageName, classFullName);
+        Intent intent;
+        if (android.os.Build.VERSION.SDK_INT < 16) {
+            intent = new Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
+        } else {
+            intent = new Intent("android.service.wallpaper.CHANGE_LIVE_WALLPAPER");
+            intent.putExtra("android.service.wallpaper.extra.LIVE_WALLPAPER_COMPONENT", componentName);
+        }
+        startActivity(intent);
     }
 }
